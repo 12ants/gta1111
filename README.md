@@ -1,51 +1,104 @@
-# gta11
+# gta1111
 
-A browser 3D game (Three.js + Cannon.js physics: characters, vehicles, scenarios), built with pnpm + Vite + React + TypeScript + React Three Fiber (R3F).
+A browser-based 3D physics playground, called **gta11** in the game. Walk around as a character, enter vehicles, and experiment with character appearance and vehicle physics on a small test map.
 
-## Setup
+This repository builds on the Sketchbook simulation with a React + React Three Fiber interface, Three.js rendering, and Cannon.js physics. The current starting scenario, **Small Plane**, is a flat 100 × 100 metre concrete platform with a player, car, helicopter, and airplane.
+
+## Screenshots
+
+Captured from this repository running locally in Chromium at 1440 × 900. These are actual game captures.
+
+![The playable character on the concrete starting map, with the helicopter in the background](docs/screenshots/playground.jpg)
+
+_The starting playground after pressing Play._
+
+![The character customizer open alongside the live 3D character](docs/screenshots/character-customizer.jpg)
+
+_The in-game customizer exposes body color, texture upload, bone scales, and saved presets._
+
+![A car spawned into the playground through the in-game vehicle loader](docs/screenshots/vehicle-playground.jpg)
+
+_A bundled car GLB loaded through the Vehicles panel._
+
+## What you can do
+
+- Walk, sprint, jump, switch camera modes, and enter nearby vehicles.
+- Drive a car or try the helicopter and airplane, with controls shown for the current vehicle.
+- Customize the active character's body color, upload a texture, and adjust bone scales. Save color and scale presets in browser local storage.
+- Spawn local `.glb` vehicles using Car, Truck, or Light physics presets. Saved vehicle configs retain the preset, not the model file; choose the GLB again when loading one.
+- Adjust lighting, time scale, shadows, FXAA, field of view, and render scale from Settings.
+- Switch between WASD and arrow keys, enable touch controls with Mobile mode, and inspect FPS, performance, or physics debug overlays.
+
+Custom vehicle models need the simulation's wheel, seat, and collision metadata to behave correctly. The Vehicles panel warns when these markers are missing.
+
+## Run locally
+
+Use **Node.js 24 LTS** and **pnpm**. The development workflow has been verified with Node 24.19.0 and pnpm 11.25.0. A browser with WebGL support is required; no backend service or API key is needed.
 
 ```bash
-pnpm install
+git clone https://github.com/12ants/gta1111.git
+cd gta1111
+pnpm install --frozen-lockfile
+pnpm dev
 ```
 
-## Commands
-
-```bash
-pnpm dev          # start the Vite dev server and capture output to debug
-pnpm build        # typecheck (tsc -b) then build a production bundle
-pnpm preview      # preview a production build
-pnpm test         # run the vitest suite
-pnpm typecheck    # tsc -b --pretty false, no emit
-pnpm build:map    # regenerate the starting map GLB after editing its generator
-pnpm build:models # regenerate JSX components for every remaining GLB
-```
-
-Before committing, run `pnpm test && pnpm typecheck && pnpm build`.
+Open the address printed by Vite and press **Play** once loading finishes. For a remotely hosted development server, use `pnpm dev --host 0.0.0.0`.
 
 ## Controls
 
-Movement, camera, and vehicle controls are shown in-game on the welcome/controls overlay after the world finishes loading, and vary by scenario.
+Click the playfield to capture the mouse when Pointer lock is enabled; press **Esc** to release it. With Pointer lock disabled in Settings, drag on the playfield to look around. Close any open HUD panel to resume game input.
+
+| Input         | On foot                                      |
+| ------------- | -------------------------------------------- |
+| W / A / S / D | Move                                         |
+| Shift         | Sprint                                       |
+| Space         | Jump                                         |
+| F / G         | Enter a nearby vehicle as driver / passenger |
+| V             | Cycle camera mode                            |
+| Shift + R     | Respawn                                      |
+| Shift + C     | Toggle free camera                           |
+| P             | Toggle performance overlay                   |
+
+Open **Controls** for the active character or vehicle's bindings. Settings can remap movement to arrow keys or enable on-screen touch controls.
+
+## Development
+
+| Command             | Purpose                                                   |
+| ------------------- | --------------------------------------------------------- |
+| `pnpm dev`          | Start the Vite development server                         |
+| `pnpm test`         | Run Vitest tests with Testing Library and jsdom           |
+| `pnpm typecheck`    | Check TypeScript project references without emitting code |
+| `pnpm build`        | Type check and build production files into `dist/`        |
+| `pnpm preview`      | Serve the production build locally after building         |
+| `pnpm format`       | Check formatting with Prettier                            |
+| `pnpm build:map`    | Regenerate the starting map GLB                           |
+| `pnpm build:models` | Regenerate typed GLTFJSX model components                 |
+
+Before committing, run:
+
+```bash
+pnpm test && pnpm typecheck && pnpm build
+```
+
+Asset generation is a separate authoring step, not required to start or build the game. Before regenerating model components, read the manual touch-up instructions in [tools/build-model-components.mjs](tools/build-model-components.mjs).
+
+## Project layout
+
+| Path                | Contents                                                       |
+| ------------------- | -------------------------------------------------------------- |
+| `src/App.tsx`       | React canvas, rendering effects, and HUD entry point           |
+| `src/game/runtime/` | Bridge between React Three Fiber and the simulation            |
+| `src/game/ui/`      | HUD, settings, customizer, vehicle loader, and shared UI store |
+| `src/game/models/`  | Generated typed GLTFJSX components and model path exports      |
+| `src/ts/`           | World simulation, characters, vehicles, input, and physics     |
+| `src/lib/cannon/`   | Bundled legacy Cannon.js physics implementation                |
+| `public/assets/`    | Runtime GLB scenes and models                                  |
+| `tools/`            | Map and model generation scripts                               |
+
+React Three Fiber owns the canvas and frame loop; `World` owns the simulation. The UI communicates with the simulation through a shared external store and explicit world methods. See [the architecture guide](docs/gta11-architecture.md) and [AGENTS.md](AGENTS.md) for development constraints.
 
 ## Assets
 
-Runtime GLB models are served from `public/assets/*` as Vite public-dir files (stable root URLs, e.g. `/assets/small_plane.glb`). The original world and Blender sources have been removed; Git history retains them.
+GLBs in `public/assets/` are served at stable `/assets/…` URLs and remain necessary for geometry, textures, animations, and simulation metadata. Model components export `MODEL_PATH` constants; reuse those paths when adding loaders.
 
-`src/game/models/*.tsx` contains the typed GLTFJSX components for every remaining asset,
-following [the GLTFJSX workflow](https://sbcode.net/react-three-fiber/gltfjsx/).
-Import a component's `Model` export inside a Canvas, for example
-`import { Model as CarModel } from './game/models/Car'`.
-`src/game/models/index.ts` re-exports each component's `MODEL_PATH` constant; the
-legacy `LoadingManager`/`VehicleSpawnPoint`/`CharacterSpawnPoint` imperative loaders
-consume those instead of hardcoding `/assets/*.glb` strings.
-The supporting GLBs remain necessary for geometry, textures, and animation clips.
-Generation preserves node names, groups, and metadata so the simulation's
-collider, seat, spawn, and animation identifiers remain available.
-
-The starting map uses a procedural concrete material with five-metre slab joints.
-Its physics box uses half-extents, matching the visible 100-by-100-metre surface at y=0.
-Scenario loading settles physics before showing Play so wheels and feet start on the ground.
-Local worktrees are excluded from Git and test discovery.
-
-## Architecture
-
-See `docs/gta11-architecture.md` for how the React/R3F shell (`src/App.tsx`, `src/game/**`) integrates with the simulation core (`src/ts/**`), including the constraint that R3F owns the WebGL canvas and frame loop while `World` owns game logic. `AGENTS.md` has the short version plus gotchas for anyone (human or agent) making changes.
+The original world and Blender sources are no longer in the checkout; Git history retains them. Some model components record third-party author and license information—check those notices before reusing or redistributing assets.
