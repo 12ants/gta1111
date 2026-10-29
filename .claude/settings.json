@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "msg=$(jq -r '(.last_assistant_message // \"\") | gsub(\"\\\\s+\"; \" \") | .[0:300]' 2>/dev/null); [ -n \"$msg\" ] || msg=\"Claude finished in $(basename \"$PWD\")\"; curl -s -m 10 -d \"$msg\" https://ntfy.sh/oioioioi >/dev/null 2>/dev/null || true",
+            "timeout": 15,
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}
